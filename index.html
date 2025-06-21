@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>プルダウン式サイズ選択キューブ</title>
+  <style>
+    body {
+      margin: 0;
+      background: #fff;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      perspective: 1000px;
+      touch-action: none;
+      position: relative;
+      font-family: sans-serif;
+    }
+    #controls {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    #resetButton, select {
+      padding: 6px 10px;
+      font-size: 14px;
+    }
+    .wrapper {
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+    }
+    .face {
+      position: absolute;
+      border: 1px solid #aaa;
+      background-color: #fff;
+      box-sizing: border-box;
+      display: grid;
+    }
+    .cell {
+      border: 1px solid #ccc;
+      background-color: #ffffff;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="sizeSelect">サイズ：</label>
+    <select id="sizeSelect">
+      <option value="3">3×3</option>
+      <option value="4">4×4</option>
+      <option value="5">5×5</option>
+    </select>
+    <button id="resetButton">色をリセット</button>
+  </div>
+
+  <div class="wrapper" id="cube"></div>
+
+  <script>
+    const wrapper = document.getElementById("cube");
+    const colors = ["#ffffff", "#ffd6e8", "#d6ecff", "#d6ffe2"];
+    const faceNames = ["front", "back", "right", "left", "top", "bottom"];
+    let gridSize = 3;
+    const allCells = [];
+
+    let rotateX = -20, rotateY = -30;
+    let isDragging = false;
+    let lastX, lastY;
+
+    function updateRotation() {
+      wrapper.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+    }
+
+    function clearFaces() {
+      wrapper.innerHTML = "";
+      allCells.length = 0;
+    }
+
+    function createFaces() {
+      const faceSize = 80 * gridSize;
+      wrapper.style.width = faceSize + "px";
+      wrapper.style.height = faceSize + "px";
+
+      faceNames.forEach(face => {
+        const faceDiv = document.createElement("div");
+        faceDiv.className = "face";
+        faceDiv.style.width = faceSize + "px";
+        faceDiv.style.height = faceSize + "px";
+        faceDiv.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+        faceDiv.style.gridTemplateRows = `repeat(${gridSize}, 1fr)`;
+
+        const z = faceSize / 2;
+        let t = "";
+        if (face === "front") t = `translateZ(${z}px)`;
+        if (face === "back") t = `rotateY(180deg) translateZ(${z}px)`;
+        if (face === "right") t = `rotateY(90deg) translateZ(${z}px)`;
+        if (face === "left")  t = `rotateY(-90deg) translateZ(${z}px)`;
+        if (face === "top")   t = `rotateX(90deg) translateZ(${z}px)`;
+        if (face === "bottom")t = `rotateX(-90deg) translateZ(${z}px)`;
+        faceDiv.style.transform = t;
+
+        for (let i = 0; i < gridSize * gridSize; i++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.index = "0";
+          cell.style.backgroundColor = colors[0];
+          cell.addEventListener("click", () => {
+            let index = parseInt(cell.dataset.index);
+            index = (index + 1) % colors.length;
+            cell.dataset.index = index;
+            cell.style.backgroundColor = colors[index];
+          });
+          faceDiv.appendChild(cell);
+          allCells.push(cell);
+        }
+        wrapper.appendChild(faceDiv);
+      });
+    }
+
+    function rebuildCube() {
+      clearFaces();
+      createFaces();
+      updateRotation();
+    }
+
+    document.getElementById("sizeSelect").addEventListener("change", e => {
+      gridSize = parseInt(e.target.value);
+      rebuildCube();
+    });
+
+    document.getElementById("resetButton").addEventListener("click", () => {
+      allCells.forEach(cell => {
+        cell.dataset.index = "0";
+        cell.style.backgroundColor = colors[0];
+      });
+    });
+
+    // ドラッグ・タッチによる回転
+    function startDrag(x, y) {
+      isDragging = true;
+      lastX = x;
+      lastY = y;
+    }
+    function drag(x, y) {
+      if (!isDragging) return;
+      rotateY += (x - lastX) * 0.5;
+      rotateX -= (y - lastY) * 0.5;
+      lastX = x;
+      lastY = y;
+      updateRotation();
+    }
+    function stopDrag() {
+      isDragging = false;
+    }
+    document.addEventListener("mousedown", e => startDrag(e.clientX, e.clientY));
+    document.addEventListener("mousemove", e => drag(e.clientX, e.clientY));
+    document.addEventListener("mouseup", stopDrag);
+    document.addEventListener("touchstart", e => startDrag(e.touches[0].clientX, e.touches[0].clientY));
+    document.addEventListener("touchmove", e => drag(e.touches[0].clientX, e.touches[0].clientY));
+    document.addEventListener("touchend", stopDrag);
+
+    // 最初の描画
+    rebuildCube();
+  </script>
+</body>
+</html>
